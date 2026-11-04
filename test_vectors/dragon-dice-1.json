@@ -1,48 +1,60 @@
 {
-  "format": "dragon-dice/1",
+  "version": "dragon-dice/1",
   "note": "SHA-512 of the UTF-8 canonical JSON; BIP39 of its first 128 / 256 bits.",
   "cases": [
     {
-      "json": "{\"dice\":[],\"format\":\"dragon-dice/1\"}",
-      "sha512": "549ce4b2e5fcaec910b2ce8d032e71cfa21f0ac598d4219584437ce78f5bc9d7685afdc202ec0455a15661c3651bb56f7e80d79ac0ee924780b69964434a9393",
-      "bip39_128": "fee transfer coach slogan slab goose drift flush minimum bonus organ oyster",
-      "bip39_256": "fee transfer coach slogan slab goose drift flush minimum bonus organ palm capable lyrics biology box canoe promote awkward what jump pupil chef this"
+      "json": "{\"dice\":[],\"version\":\"dragon-dice/1\"}",
+      "sha512": "ad96d8d2864b6bd35598ddbafd38de949bb2dfd2ab1ae6e6f887a3a68c9c5db24655e425a8319335f39c1d2d3b5957253a63dab4b9154ce60602602c8962e6fd",
+      "bip39_128": "pulse replace cruise arrive repeat trust filter brick road truth dash circle",
+      "bip39_256": "pulse replace cruise arrive repeat trust filter brick road truth dash circle robot husband enjoy globe tragic daughter capable elder hand evolve item faculty"
     },
     {
-      "json": "{\"dice\":[{\"faces\":2,\"rolls\":[1,2,2,1,1,2,1,2]}],\"format\":\"dragon-dice/1\"}",
-      "sha512": "69e0f73c6212274d6a3cdc389192da6951a4c06b6788792092b84857572356c14af247e0553fbfcbf71d7eadd1d5e29215c0a3bc30e14643972f1a9c8d2295db",
-      "bip39_128": "hazard amateur someone service carbon pluck pottery oppose decade milk repair spot",
-      "bip39_256": "hazard amateur someone service carbon pluck pottery oppose decade milk repair sport bottom gasp pulse valve junior afraid puppy mouse install museum force choose"
+      "json": "{\"dice\":[{\"faces\":2,\"rolls\":[1,2,2,1,1,2,1,2]}],\"version\":\"dragon-dice/1\"}",
+      "sha512": "4ab4a3c17718c99cc6b5d6295139dff3f69b7dc262c04a260d9cace6908f97cb79790b084268d18e4ef1f389a46772ce4e9f144c2eba7118af85961e752a5ef4",
+      "bip39_128": "enjoy pink utility until milk solar bracket river citizen mean jewel traffic",
+      "bip39_256": "enjoy pink utility until milk solar bracket river citizen mean jewel tree have same another fix enforce corn grunt flush harbor elephant game glare"
     },
     {
-      "json": "{\"dice\":[{\"faces\":6,\"rolls\":[3,1,6]}],\"format\":\"dragon-dice/1\"}",
-      "sha512": "ee2dab6ce39e4f9f24d1321e4ef488e58c5db55c33b04dd099f9833b0a5be16402b63ab1032a28125ce07b3249cc3c920358d611fa70d54aa79309ab2a8690ac",
-      "bip39_128": "until hood swamp shrimp top sort nation chaos bundle jeans captain ski",
-      "bip39_256": "until hood swamp shrimp top sort nation chaos bundle jeans captain slam shift survey ignore invite evidence luggage lazy all radar combine machine normal"
+      "json": "{\"dice\":[{\"faces\":6,\"rolls\":[3,1,6]}],\"version\":\"dragon-dice/1\"}",
+      "sha512": "0c774b3e1b7fc7a185778215085a9471f21f0e9cf07dd03b2f4eb03ff4b26dba02dce4a20832773f5b4e4b34f4aa74e0afca4333ddbb98626dc690c2c534d2f5",
+      "bip39_128": "arrest ripple sort dad wise speak beyond utility bench drift pink together",
+      "bip39_256": "arrest ripple sort dad wise speak beyond utility bench drift pink token capable mansion inherit autumn south sunny squirrel gather young float report dust"
     },
     {
-      "json": "{\"dice\":[{\"faces\":20,\"rolls\":[1,2,3,4,5,6,7,8]}],\"format\":\"dragon-dice/1\"}",
-      "sha512": "3678a343d47cebe9e8f4cd32ab0a282d554eee914c5b7ce8f498c282aa66bc2b0ee5c2bd96ae52fa2086967ad25461312eee25410082896276b58775e88cea75",
-      "bip39_128": "cushion shallow special pottery solid visual phrase often crawl flame meat forum",
-      "bip39_256": "cushion shallow special pottery solid visual phrase often crawl flame meat follow female jar early merge language element change lunar click crew vague laugh"
+      "json": "{\"dice\":[{\"faces\":20,\"rolls\":[1,2,3,4,5,6,7,8]}],\"version\":\"dragon-dice/1\"}",
+      "sha512": "019f1a4bf9e9a6a0dc6ecb849226741c359675b4c2f0006564d6c90933169ecd6cdb91a894a7c4d1152e33e031db94a8c0d9141eb4db0a873c5ebcf4e54d1761",
+      "bip39_128": "account web napkin video omit expire immune sunny loyal muffin other debate",
+      "bip39_256": "account web napkin video omit expire immune sunny loyal muffin other debris floor depart spread fun about clinic cup must nasty mercy kite rail"
     },
     {
-      "json": "{\"dice\":[{\"faces\":6,\"rolls\":[3,1,6]},{\"faces\":20,\"rolls\":[17,2]}],\"format\":\"dragon-dice/1\"}",
-      "sha512": "63e255a057488956907507baabd2eb58f48c406ffdd1ce291722e7c5dbd104738781840ee1828ebec2475ee1b3592f53ab5405874326496713c356aacf1d5e4b",
-      "bip39_128": "glue bargain gym purse mass prize dove path rival future river rapid",
-      "bip39_256": "glue bargain gym purse mass prize dove path rival future river rapid emotion cage say riot soda emerge silly sort frozen trigger balcony grape"
+      "json": "{\"dice\":[{\"faces\":6,\"rolls\":[3,1,6]},{\"faces\":20,\"rolls\":[17,2]}],\"version\":\"dragon-dice/1\"}",
+      "sha512": "a44c175f4d75cb842c1e493c12f79b2cf83f68ee4051efa3f3d84ea19dd8fa968f11f4f289248f5ce3193db9f50666205595af807913944d04ec688b5e3cb9e9",
+      "bip39_128": "picture gaze style online frequent search race since despair nut traffic flame",
+      "bip39_256": "picture gaze style online frequent search race since despair nut traffic fly loop refuse ribbon any use buzz voyage outer border unaware tumble soldier"
     },
     {
-      "json": "{\"dice\":[{\"faces\":4,\"rolls\":[4,4,1]},{\"faces\":8,\"rolls\":[8,1]},{\"faces\":10,\"rolls\":[10,1,5]},{\"faces\":12,\"rolls\":[12,11]},{\"faces\":6,\"rolls\":[]}],\"format\":\"dragon-dice/1\"}",
-      "sha512": "4ca53c5ddbcae311bb24084c5db3a5feb3b0d00b6bdfc1b26a52d220e0d929b73e7654302c4704deef3deccf308f1c03f814c7bdf6517136038d131e10bdef41",
-      "bip39_128": "erosion clarify blast resource purchase match uncle library era unique truly wood",
-      "bip39_256": "erosion clarify blast resource purchase match uncle library era unique truly word deposit gym color know script nation net picture asthma hold plug toilet"
+      "json": "{\"dice\":[{\"faces\":4,\"rolls\":[4,4,1]},{\"faces\":8,\"rolls\":[8,1]},{\"faces\":10,\"rolls\":[10,1,5]},{\"faces\":12,\"rolls\":[12,11]},{\"faces\":6,\"rolls\":[]}],\"version\":\"dragon-dice/1\"}",
+      "sha512": "ebe2f40acba83e03591f3cbafdacc3c6fa6069828d8dfc1b890f775abab22d4504ce84b2774d9d2bb26421800dd4b8a562582d72a34711a68aae5cef3f8c44f3",
+      "bip39_128": "typical bless actor nuclear loop accuse good travel road uniform couch method",
+      "bip39_256": "typical bless actor nuclear loop accuse good travel road uniform couch mistake plastic crumble any random winter sword duck upgrade produce flip relax razor"
     },
     {
-      "json": "{\"dice\":[{\"faces\":52,\"rolls\":[52,1,26,13]}],\"format\":\"dragon-dice/1\"}",
-      "sha512": "09e6365c14f4057dc670a0ce7d05e566e631e18c794ecee13392e6de5874804c916f0c2db1587388b47b0845355c15fce008174f11f990cd3553d7e36aa662cd",
-      "bip39_128": "antique coyote novel clarify doctor same border beef solar trial junk smooth",
-      "bip39_256": "antique coyote novel clarify doctor same border beef solar trial junk soccer glide valid cradle clap solve another tool soap tortoise demise abuse now"
+      "json": "{\"dice\":[{\"faces\":52,\"rolls\":[52,1,26,13]}],\"version\":\"dragon-dice/1\"}",
+      "sha512": "81dd6541c60a53fff9da31cef164c2c86c90ff69db8c8b291a3eb95e0f164d61c73f194bfd0661301fbe3bf65c9796b6a7a4097f828fc7a0d2462accd049cc48",
+      "bip39_128": "limb twenty expire metal pioneer zoo trash economy solve menu cost music",
+      "bip39_256": "limb twenty expire metal pioneer zoo trash economy solve menu cost move simple leisure polar immense menu emotion moral increase thought menu culture cute"
+    },
+    {
+      "json": "{\"dice\":[{\"faces\":20,\"rolls\":[20,1]}],\"system\":{\"mouse\":\"abababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababababab\",\"random\":\"0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f\"},\"version\":\"dragon-dice/1\"}",
+      "sha512": "0afd23d8071ec400d4f89abd9d9e6044c4e4749d029af33ec3fd886ba138d844321da6be9dc82f8acdf17cff7dfb4899d939eaff5b8f395ea2033bb1e8875bf4",
+      "bip39_128": "april trouble voyage athlete unable about fault battle rural undo object maximum",
+      "bip39_256": "april trouble voyage athlete unable about fault battle rural undo object maze exact demise inject fashion veteran voyage youth awkward ring organ genre life"
+    },
+    {
+      "json": "{\"dice\":[],\"system\":{\"accelerometer\":\"22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222\",\"camera\":\"11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111\",\"random\":\"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"},\"version\":\"dragon-dice/1\"}",
+      "sha512": "df07d2f778efa1f496510c22b65d125d8e0c0af53de82df6946629430a4c0dae8f08e1dd8908e5985b74bc43733baafb1c6ba1cb2eb91642b6d8cad2b72fb542",
+      "bip39_128": "tenant direct saddle vault wheel where flock canoe cargo real duty roast",
+      "bip39_256": "tenant direct saddle vault wheel where flock canoe cargo real duty roast this air stay rug combine regret book family cost champion cute squirrel"
     }
   ]
 }

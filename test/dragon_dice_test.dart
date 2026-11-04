@@ -33,7 +33,7 @@ void main() {
       expect(
         r.canonicalJson(),
         '{"dice":[{"faces":6,"rolls":[3,1,6]},{"faces":20,"rolls":[17,2]}],'
-        '"format":"dragon-dice/1"}',
+        '"version":"dragon-dice/1"}',
       );
       expect(r.rollCount, 5);
       expect(r.fairBits, closeTo(3 * math.log(6) / math.ln2 + 2 * math.log(20) / math.ln2, 1e-9));
@@ -41,21 +41,25 @@ void main() {
 
     test('any spacing or key order parses back to the same canonical JSON', () {
       const String loose = '''
-        { "format": "dragon-dice/1",
+        { "version": "dragon-dice/1",
           "dice": [ { "rolls": [3, 1, 6], "faces": 6 } ] }''';
       expect(DiceRolls.parse(loose).canonicalJson(),
-          '{"dice":[{"faces":6,"rolls":[3,1,6]}],"format":"dragon-dice/1"}');
+          '{"dice":[{"faces":6,"rolls":[3,1,6]}],"version":"dragon-dice/1"}');
     });
 
     test('a file in any other shape is refused', () {
       for (final String bad in <String>[
         '[]',
-        '{"dice":[],"format":"dragon-dice/2"}',
-        '{"dice":[],"format":"dragon-dice/1","extra":1}',
-        '{"dice":[{"faces":6,"rolls":[7]}],"format":"dragon-dice/1"}',
-        '{"dice":[{"faces":1,"rolls":[]}],"format":"dragon-dice/1"}',
-        '{"dice":[{"faces":6,"rolls":[1.5]}],"format":"dragon-dice/1"}',
-        '{"dice":[{"faces":6}],"format":"dragon-dice/1"}',
+        '{"dice":[],"version":"dragon-dice/2"}',
+        '{"dice":[],"format":"dragon-dice/1"}',
+        '{"dice":[],"version":"dragon-dice/1","extra":1}',
+        '{"dice":[],"system":{},"version":"dragon-dice/1"}',
+        '{"dice":[],"system":{"mouse":"ab"},"version":"dragon-dice/1"}',
+        '{"dice":[],"system":{"radio":"${'ab' * 64}"},"version":"dragon-dice/1"}',
+        '{"dice":[{"faces":6,"rolls":[7]}],"version":"dragon-dice/1"}',
+        '{"dice":[{"faces":1,"rolls":[]}],"version":"dragon-dice/1"}',
+        '{"dice":[{"faces":6,"rolls":[1.5]}],"version":"dragon-dice/1"}',
+        '{"dice":[{"faces":6}],"version":"dragon-dice/1"}',
         'not json',
       ]) {
         expect(() => DiceRolls.parse(bad), throwsFormatException, reason: bad);
@@ -181,8 +185,86 @@ void main() {
     expect(lines[2], contains('32'));
   });
 
+  group('sources', () {
+    test('sources sit under "system", sorted, before the version', () {
+      final DiceRolls r = DiceRolls(<DieRolls>[DieRolls(Die(6), <int>[1])])
+        ..setSource(kSourceRandom, '0f' * kSystemRandomBytes)
+        ..setSource(kSourceMouse, 'ab' * kDigestBytes);
+      final String json = r.canonicalJson();
+      expect(json, startsWith('{"dice":[{"faces":6,"rolls":[1]}],"system":{"mouse":"abab'));
+      expect(json, contains('"},"version":"dragon-dice/1"}'));
+      expect(json.indexOf('"mouse"'), lessThan(json.indexOf('"random"')));
+      expect(DiceRolls.parse(json).canonicalJson(), json);
+      expect(() => r.setSource(kSourceMouse, 'AB' * kDigestBytes), throwsArgumentError,
+          reason: 'lowercase hex only');
+      expect(() => r.setSource('radio', 'ab' * kDigestBytes), throwsArgumentError);
+    });
+
+    test('NIST most-common-value estimate', () {
+      expect(mcvMinEntropy(List<int>.filled(100, 7)), 0);
+      // 256 symbols, each once: p = 1/256, raised to its 99 % upper bound.
+      final double p = 1 / 256;
+      final double upper = p + 2.576 * math.sqrt(p * (1 - p) / 255);
+      expect(mcvMinEntropy(<int>[for (int i = 0; i < 256; i++) i]),
+          closeTo(-math.log(upper) / math.ln2, 1e-12));
+    });
+
+    test('a capture is credited by its changes, and hashed', () {
+      final SensorCapture steady = SensorCapture(2);
+      for (int i = 0; i < 200; i++) {
+        steady.add(<int>[1000 + 3 * i, 50]);
+      }
+      expect(steady.credit().bits, 0, reason: 'a steady drift is no entropy');
+      final SensorCapture noisy = SensorCapture(1);
+      final math.Random rng = math.Random(1);
+      for (int i = 0; i < 2000; i++) {
+        noisy.add(<int>[rng.nextInt(1 << 20)]);
+      }
+      final SensorCredit c = noisy.credit();
+      expect(c.perSymbol, greaterThan(6));
+      expect(c.bits, closeTo(c.symbols * c.perSymbol, 1e-9));
+      final SensorCapture few = SensorCapture(1)..add(<int>[1])..add(<int>[9]);
+      expect(few.credit().bits, 0, reason: 'too few symbols');
+      expect(noisy.digestHex(), hasLength(2 * kDigestBytes));
+      final String d = noisy.digestHex();
+      noisy.wipe();
+      expect(noisy.length, 0);
+      expect(d, isNot(noisy.digestHex()));
+    });
+
+    test('system randomness: 1 KiB as hex', () {
+      final String hex = systemRandomHex();
+      expect(hex, hasLength(2 * kSystemRandomBytes));
+      expect(RegExp(r'^[0-9a-f]+$').hasMatch(hex), isTrue);
+    });
+  });
+
+  group('simulation', () {
+    test('xoshiro256** seeded by SplitMix64, pinned', () {
+      // Checked against an independent implementation; SplitMix64's first
+      // output from 0 is the published e220a8397b1dcdaf.
+      final Xoshiro256 g = Xoshiro256(0);
+      String hex(int x) =>
+          (x >>> 32).toRadixString(16).padLeft(8, '0') +
+          (x & 0xffffffff).toRadixString(16).padLeft(8, '0');
+      expect(<String>[for (int i = 0; i < 3; i++) hex(g.nextInt64())],
+          <String>['99ec5f36cb75f2b4', 'bf6e1f784956452a', '1a5f849d4933e6e0']);
+      final Xoshiro256 h = Xoshiro256(kEstimatorSeed);
+      expect(hex(h.nextInt64()), 'dfc24148b36385e0');
+      final double u = Xoshiro256(1).nextDouble();
+      expect(u, inInclusiveRange(0, 1));
+    });
+
+    test('samples follow the bound', () {
+      expect(samplesForBound(0.01), 10000);
+      expect(samplesForBound(0.001), 100000);
+      expect(samplesForBound(0.05), 2000);
+      expect(kDefaultSamples, samplesForBound(kDefaultBound));
+    });
+  });
+
   group('frozen vectors', () {
-    test('format dragon-dice/1', () async {
+    test('dragon-dice/1', () async {
       final Object? file = jsonDecode(
           await File('test_vectors/dragon-dice-1.json').readAsString());
       final List<Object?> cases = (file! as Map<String, Object?>)['cases']! as List<Object?>;

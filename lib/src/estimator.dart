@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'dice.dart';
+import 'prng.dart';
 
 /// How much a roll's unpredictability is counted.
 enum EntropyMeasure {
@@ -39,12 +40,24 @@ class Prior {
   static const List<Prior> presets = <Prior>[jeffreys, flat, nearFair];
 }
 
-/// Monte Carlo draws per estimate: enough to read a probability near 1 % to
-/// about ±0.1 %.
-const int kDefaultSamples = 20000;
+/// The default bound on the chance of falling short of the target.
+const double kDefaultBound = 0.01;
 
-/// Fixed seed of the estimate's random draws, so the same rolls always draw
-/// the same curve. The draws are not secret and carry nothing of the rolls.
+/// Simulation samples per unit of 1 / bound: at about 100 / bound samples, the
+/// statistical error on a chance near the bound is about a tenth of it.
+const double kSamplesPerInverseBound = 100;
+
+/// Simulation samples for a [bound]: about 100 / bound, so a tighter bound gets
+/// a more precise estimate (10 000 at 1 %, 100 000 at 0.1 %).
+int samplesForBound(double bound) => (kSamplesPerInverseBound / bound).ceil();
+
+/// Simulation samples at the default bound: [samplesForBound] of
+/// [kDefaultBound], held equal by a test (a constant, for default arguments).
+const int kDefaultSamples = 10000;
+
+/// Fixed seed of the simulation's pseudorandom generator ([Xoshiro256]), so
+/// the same rolls always draw the same curve. The samples are not secret and
+/// carry nothing of the rolls.
 const int kEstimatorSeed = 0x0D1CE;
 
 /// The settings of an estimate (advanced mode).
@@ -55,6 +68,14 @@ class EstimatorSettings {
     this.samples = kDefaultSamples,
     this.seed = kEstimatorSeed,
   });
+
+  /// Settings whose sample count follows [bound] ([samplesForBound]).
+  EstimatorSettings.forBound(
+    double bound, {
+    this.prior = Prior.flat,
+    this.measure = EntropyMeasure.min,
+    this.seed = kEstimatorSeed,
+  }) : samples = samplesForBound(bound);
 
   final Prior prior;
   final EntropyMeasure measure;
@@ -127,8 +148,7 @@ EntropyDistribution perRollPosterior(DieRolls rolls,
     _perRoll(rolls.counts, settings);
 
 EntropyDistribution _perRoll(List<int> counts, EstimatorSettings settings) {
-  final math.Random rng = math.Random(settings.seed);
-  final _Gamma gamma = _Gamma(rng);
+  final _Gamma gamma = _Gamma(Xoshiro256(settings.seed));
   final List<double> p = List<double>.filled(counts.length, 0);
   return EntropyDistribution(<double>[
     for (int s = 0; s < settings.samples; s++)
@@ -142,8 +162,7 @@ EntropyDistribution _perRoll(List<int> counts, EstimatorSettings settings) {
 /// dice. Dice are independent; a die without rolls adds nothing.
 EntropyDistribution totalEntropy(DiceRolls rolls,
     [EstimatorSettings settings = const EstimatorSettings()]) {
-  final math.Random rng = math.Random(settings.seed);
-  final _Gamma gamma = _Gamma(rng);
+  final _Gamma gamma = _Gamma(Xoshiro256(settings.seed));
   final List<({List<int> counts, int n, List<double> p})> dice =
       <({List<int> counts, int n, List<double> p})>[
     for (final DieRolls d in rolls.dice)
@@ -203,7 +222,7 @@ double _entropy(List<double> p, EntropyMeasure measure) {
 class _Gamma {
   _Gamma(this._rng);
 
-  final math.Random _rng;
+  final Xoshiro256 _rng;
   double? _spare;
 
   /// Marsaglia–Tsang's constants: `d = a − 1/3`, `c = 1/√(9d)`, and the

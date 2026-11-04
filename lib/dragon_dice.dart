@@ -10,4 +10,6 @@ library;
 export 'src/bip39.dart' show bip39FromDigest, bip39Mnemonic, bip39Words, kBip39EntropyBits;
 export 'src/dice.dart';
 export 'src/estimator.dart';
+export 'src/prng.dart';
+export 'src/sources.dart';
 export 'src/text_curve.dart';

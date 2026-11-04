@@ -28,9 +28,19 @@ void main() {
       DieRolls(Die(6), <int>[]),
     ]),
     DiceRolls(<DieRolls>[DieRolls(Die(52), <int>[52, 1, 26, 13])]),
+    // Peripheral sources: fixed stand-ins for captured digests and bytes.
+    DiceRolls(<DieRolls>[DieRolls(Die(20), <int>[20, 1])], <String, String>{
+      kSourceMouse: 'ab' * kDigestBytes,
+      kSourceRandom: '0f' * kSystemRandomBytes,
+    }),
+    DiceRolls(<DieRolls>[], <String, String>{
+      kSourceRandom: '00' * kSystemRandomBytes,
+      kSourceCamera: '11' * kDigestBytes,
+      kSourceAccelerometer: '22' * kDigestBytes,
+    }),
   ];
   final Map<String, Object> out = <String, Object>{
-    'format': kFormat,
+    'version': kVersion,
     'note': 'SHA-512 of the UTF-8 canonical JSON; BIP39 of its first 128 / '
         '256 bits.',
     'cases': <Map<String, String>>[

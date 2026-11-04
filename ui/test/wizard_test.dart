@@ -43,7 +43,7 @@ void main() {
     await type(tester, ''); // Enter on an empty line finishes
     expect(done, isNotNull);
     expect(done!.canonicalJson(),
-        '{"dice":[{"faces":20,"rolls":[1,2,3,4,5,6,7,8]}],"format":"dragon-dice/1"}');
+        '{"dice":[{"faces":20,"rolls":[1,2,3,4,5,6,7,8]}],"version":"dragon-dice/1"}');
   });
 
   testWidgets('a bad roll is refused without echoing it', (WidgetTester tester) async {

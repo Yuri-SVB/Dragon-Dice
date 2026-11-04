@@ -24,13 +24,16 @@ Options:
                  is their entropy (128 to 256 bits)
   --target BITS  entropy target in bits, instead of the words'
   --show         echo rolls as typed (default: hidden)
+  --system       also mix in $kSystemRandomBytes bytes of system randomness: a
+                 backup, never counted toward the target
   --save FILE    also write the rolls JSON to FILE — it IS the secret
   --advanced     the Bayesian estimate: rolls are ready when the chance of
-                 carrying less than the target is at most --bound
+                 carrying less than the target is at most --bound. Its curve
+                 is computed from your secret rolls: use it in private.
   --prior P      jeffreys | flat | near-fair | a number (default flat)
   --measure M    min | shannon (default min)
   --bound P      highest acceptable chance of falling short (default 0.01)
-  --samples N    Monte Carlo draws (default $kDefaultSamples)
+  --samples N    simulation samples (default 100 / bound)
   -h, --help     this help
 
 Advanced mode also takes custom dice: d52 for a card drawn from a
@@ -39,12 +42,10 @@ See doc/ADVANCED.md.''';
 
 /// Exit codes.
 const int _kOk = 0;
+const int _kDeclined = 2;
 const int _kUsageError = 64;
 const int _kDataError = 65;
 const int _kCancelled = 1;
-
-/// The default chance of falling short of the target (advanced mode).
-const double _kDefaultBound = 0.01;
 
 /// Default BIP39 words.
 const int _kDefaultWords = 24;
@@ -53,18 +54,22 @@ class _Options {
   int words = _kDefaultWords;
   double? target;
   bool show = false;
+  bool system = false;
   String? save;
   bool advanced = false;
   Prior prior = Prior.flat;
   EntropyMeasure measure = EntropyMeasure.min;
-  double bound = _kDefaultBound;
-  int samples = kDefaultSamples;
+  double bound = kDefaultBound;
+  int? samples;
   final List<String> rest = <String>[];
 
   int get entropyBits => kBip39EntropyBits[_kWordCounts.indexOf(words)];
   double get targetBits => target ?? entropyBits.toDouble();
-  EstimatorSettings get settings =>
-      EstimatorSettings(prior: prior, measure: measure, samples: samples);
+  EstimatorSettings get settings => EstimatorSettings(
+        prior: prior,
+        measure: measure,
+        samples: samples ?? samplesForBound(bound),
+      );
 }
 
 final List<int> _kWordCounts = <int>[
@@ -124,6 +129,8 @@ _Options _parse(List<String> args) {
         o.target = t;
       case '--show':
         o.show = true;
+      case '--system':
+        o.system = true;
       case '--save':
         o.save = value(it, a);
       case '--advanced':
@@ -202,10 +209,23 @@ int _bip39(_Options o) {
   return _kOk;
 }
 
+/// The acknowledgement advanced mode asks for: its curve and figures are
+/// computed from the secret rolls, so whoever sees them learns about the
+/// rolls.
+bool _acknowledgeAdvanced() {
+  stdout.write('''
+  !!! ADVANCED MODE SHOWS WHAT YOUR ROLLS LOOK LIKE !!!
+  Its curve, median and chances are computed from your secret rolls: anyone
+  who sees this screen, or a recording of it, learns something about them.
+  Use it only where no one and no camera can see. Type YES to go on: ''');
+  return (stdin.readLineSync()?.trim() ?? '') == 'YES';
+}
+
 int _interactive(_Options o) {
+  if (o.advanced && !_acknowledgeAdvanced()) return _kDeclined;
   final DiceRolls rolls = DiceRolls();
   stdout.writeln('''
-Dragon Dice — target ${o.targetBits.toStringAsFixed(0)} bits (${o.words} BIP39 words)${o.advanced ? ', advanced' : ''}.
+Dragon Dice — target ${o.targetBits.toStringAsFixed(0)} bits (${o.words} BIP39 words)${o.advanced ? ', advanced' : ''}${o.system ? ', with system randomness (not counted)' : ''}.
 
   d6, d20, …  start a die (each one you start is another physical die)
   3 1 6       its rolls, as they come (hidden; ${o.show ? 'shown' : 'add --show to see them'})
@@ -264,6 +284,7 @@ Dice: ${kStandardFaces.map((int f) => 'd$f').join(' ')}${o.advanced ? ', or any 
     parsed.forEach(current.add);
     _report(rolls, o, added: parsed.length);
   }
+  if (o.system) rolls.setSource(kSourceRandom, systemRandomHex());
   final Uint8List digest = rolls.digest();
   final String? save = o.save;
   if (save != null) {

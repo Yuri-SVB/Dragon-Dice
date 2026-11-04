@@ -45,9 +45,6 @@ abstract final class DiceCue {
   ];
 }
 
-/// The default bound on the chance of falling short (advanced mode).
-const double kDefaultBound = 0.01;
-
 /// The bounds offered (advanced mode).
 const List<double> kBounds = <double>[0.001, 0.01, 0.05];
 

@@ -13,9 +13,30 @@ const List<int> kStandardFaces = <int>[2, 4, 6, 8, 10, 12, 20];
 const int kMinFaces = 2;
 const int kMaxFaces = 1000;
 
-/// The format tag in every rolls JSON: names the format, so a later one can
+/// The version tag in every rolls JSON: names the format, so a later one can
 /// never be mistaken for this one.
-const String kFormat = 'dragon-dice/1';
+const String kVersion = 'dragon-dice/1';
+
+/// The peripheral sources a rolls JSON may mix in, under `"system"`, in key
+/// order. Each holds the SHA-512 (hex) of the raw data captured, except
+/// [kSourceRandom], which holds the system's random bytes themselves.
+const String kSourceAccelerometer = 'accelerometer';
+const String kSourceCamera = 'camera';
+const String kSourceMouse = 'mouse';
+const String kSourceRandom = 'random';
+const List<String> kSources = <String>[
+  kSourceAccelerometer,
+  kSourceCamera,
+  kSourceMouse,
+  kSourceRandom,
+];
+
+/// Bytes of system randomness mixed in: deliberately far more than needed, as
+/// a backup that is never counted.
+const int kSystemRandomBytes = 1024;
+
+/// Bytes of a SHA-512 digest.
+const int kDigestBytes = 64;
 
 /// A die with [faces] equally likely faces, numbered 1 to [faces].
 class Die {
@@ -105,12 +126,39 @@ class DieRolls {
   }
 }
 
-/// All the rolls of one entry: one sequence per physical die, in the order
-/// the dice were added. The secret is the SHA-512 of their canonical JSON.
+/// All the rolls of one entry — one sequence per physical die, in the order
+/// the dice were added — and any peripheral sources mixed in. The secret is
+/// the SHA-512 of their canonical JSON.
 class DiceRolls {
-  DiceRolls([List<DieRolls>? dice]) : dice = dice ?? <DieRolls>[];
+  DiceRolls([List<DieRolls>? dice, Map<String, String>? system])
+      : dice = dice ?? <DieRolls>[],
+        system = system ?? <String, String>{} {
+    this.system.forEach(_checkSource);
+  }
 
   final List<DieRolls> dice;
+
+  /// Peripheral sources by name ([kSources]): lowercase hex, the SHA-512 of
+  /// the raw data captured, or for [kSourceRandom] the [kSystemRandomBytes]
+  /// random bytes themselves.
+  final Map<String, String> system;
+
+  /// Mix in [source] with [hex] (see [system]).
+  void setSource(String source, String hex) {
+    _checkSource(source, hex);
+    system[source] = hex;
+  }
+
+  static void _checkSource(String source, String hex) {
+    if (!kSources.contains(source)) {
+      throw ArgumentError.value(source, 'source', 'must be one of $kSources');
+    }
+    final int bytes =
+        source == kSourceRandom ? kSystemRandomBytes : kDigestBytes;
+    if (!RegExp('^[0-9a-f]{${2 * bytes}}\$').hasMatch(hex)) {
+      throw ArgumentError('$source is $bytes bytes, in lowercase hex');
+    }
+  }
 
   /// How many rolls, over all dice.
   int get rollCount =>
@@ -121,10 +169,10 @@ class DiceRolls {
       dice.fold<double>(0, (double b, DieRolls d) => b + d.fairBits);
 
   /// The canonical JSON the digest is taken of: keys sorted, no whitespace,
-  /// numbers in decimal, dice in the order added, rolls in the order rolled.
-  /// For example:
+  /// numbers in decimal, dice in the order added, rolls in the order rolled,
+  /// `"system"` only when a source is mixed in. For example:
   ///
-  /// `{"dice":[{"faces":6,"rolls":[3,1,6]},{"faces":20,"rolls":[17,2]}],"format":"dragon-dice/1"}`
+  /// `{"dice":[{"faces":6,"rolls":[3,1,6]},{"faces":20,"rolls":[17,2]}],"version":"dragon-dice/1"}`
   ///
   /// Anyone can check a digest with standard tools, e.g.
   /// `printf '%s' '<json>' | sha512sum`.
@@ -139,7 +187,20 @@ class DiceRolls {
         ..write(dice[i].rolls.join(','))
         ..write(']}');
     }
-    out.write('],"format":"$kFormat"}');
+    out.write(']');
+    if (system.isNotEmpty) {
+      out.write(',"system":{');
+      bool first = true;
+      for (final String source in kSources) {
+        final String? hex = system[source];
+        if (hex == null) continue;
+        if (!first) out.write(',');
+        out.write('"$source":"$hex"');
+        first = false;
+      }
+      out.write('}');
+    }
+    out.write(',"version":"$kVersion"}');
     return out.toString();
   }
 
@@ -151,9 +212,27 @@ class DiceRolls {
   /// inverse of [canonicalJson]. Throws [FormatException] on anything else.
   factory DiceRolls.fromJson(Object? json) {
     if (json is! Map<String, Object?> ||
-        json.length != 2 ||
-        json['format'] != kFormat) {
-      throw const FormatException('not a $kFormat rolls file');
+        json['version'] != kVersion ||
+        !json.containsKey('dice') ||
+        json.keys.any((String k) => !<String>{'dice', 'system', 'version'}.contains(k))) {
+      throw const FormatException('not a $kVersion rolls file');
+    }
+    final Map<String, String> system = <String, String>{};
+    if (json.containsKey('system')) {
+      final Object? sources = json['system'];
+      if (sources is! Map<String, Object?> || sources.isEmpty) {
+        throw const FormatException('"system" holds at least one source');
+      }
+      for (final MapEntry<String, Object?> e in sources.entries) {
+        final Object? hex = e.value;
+        try {
+          if (hex is! String) throw ArgumentError('not hex');
+          _checkSource(e.key, hex);
+        } on ArgumentError {
+          throw FormatException('"system" source ${e.key} is not valid');
+        }
+        system[e.key] = hex;
+      }
     }
     final Object? list = json['dice'];
     if (list is! List<Object?>) {
@@ -184,7 +263,7 @@ class DiceRolls {
       }
       dice.add(DieRolls(die, values));
     }
-    return DiceRolls(dice);
+    return DiceRolls(dice, system);
   }
 
   /// Rolls from JSON text; see [DiceRolls.fromJson].
@@ -198,13 +277,15 @@ class DiceRolls {
     return DiceRolls.fromJson(json);
   }
 
-  /// Overwrite every roll and empty the lists. (The JSON strings built from
-  /// them are immutable and cannot be wiped; they go with the garbage.)
+  /// Overwrite every roll and empty the lists and sources. (Strings — the
+  /// sources' hex and the JSON built from them — are immutable and cannot be
+  /// wiped; they go with the garbage.)
   void wipe() {
     for (final DieRolls d in dice) {
       d.wipe();
     }
     dice.clear();
+    system.clear();
   }
 }
 
