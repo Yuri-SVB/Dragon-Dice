@@ -1,0 +1,28 @@
+name: dragon_dice_ui
+description: >-
+  The Dragon Dice wizard for Flutter apps: add dice, enter their rolls, watch
+  the entropy they carry against a target, and get the rolls back.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dragon_dice:
+    path: ..
+  # Peripheral sources, each where its platform has it: the accelerometer
+  # (phones, tablets) and the camera (flutter_webrtc on every native platform,
+  # as Great Wall's desktop QR scanner).
+  sensors_plus: ^7.1.1
+  flutter_webrtc: ^1.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
