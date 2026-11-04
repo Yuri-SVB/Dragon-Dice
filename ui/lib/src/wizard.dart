@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'capture.dart';
 import 'entropy_chart.dart';
 
 /// The cue names the wizard reports through [DragonDiceWizard.onCue], for a
@@ -14,6 +15,7 @@ abstract final class DiceCue {
   static const String rolls = 'press.dice.rolls';
   static const String undo = 'press.dice.undo';
   static const String reveal = 'press.dice.reveal';
+  static const String source = 'press.dice.source';
   static const String advanced = 'press.dice.advanced';
   static const String setting = 'press.dice.setting';
   static const String done = 'press.dice.done';
@@ -25,8 +27,9 @@ abstract final class DiceCue {
   /// The rolls just reached the target.
   static const String ready = 'confirm';
 
-  /// The warning before finishing short of the target.
-  static const String short = 'alert.warning';
+  /// The warnings: before finishing short of the target, and before
+  /// advanced mode (its curves show the rolls' spread).
+  static const String warning = 'alert.warning';
 
   static const List<String> all = <String>[
     addDie,
@@ -35,21 +38,19 @@ abstract final class DiceCue {
     rolls,
     undo,
     reveal,
+    source,
     advanced,
     setting,
     done,
     cancel,
     badRoll,
     ready,
-    short,
+    warning,
   ];
 }
 
 /// The bounds offered (advanced mode).
 const List<double> kBounds = <double>[0.001, 0.01, 0.05];
-
-/// The Monte Carlo draws offered (advanced mode).
-const List<int> kSampleChoices = <int>[5000, kDefaultSamples, 50000];
 
 /// Width of the dice column, in logical pixels.
 const double _kDiceColumnWidth = 300;
@@ -60,11 +61,16 @@ const int _kTotalChartFlex = 2;
 /// The Dragon Dice wizard: add dice, type their rolls, watch the entropy
 /// they carry reach [targetBits], and finish.
 ///
-/// Vanilla, rolls are ready once they carry the target if the dice are fair.
-/// In advanced mode, once the Bayesian estimate's chance of falling short is
-/// at most the bound. Finishing short of the target is allowed after an
-/// emphatic warning; finishing without a single roll is not (its digest is
-/// public).
+/// Peripheral sources add to the dice: each capture (mouse, accelerometer,
+/// camera) is credited and counts toward the target; the system's randomness
+/// is mixed in as a backup and never counted.
+///
+/// Vanilla, rolls are ready once dice and sources carry the target if the
+/// dice are fair. In advanced mode, once the Bayesian estimate's chance of
+/// falling short is at most the bound; turning it on asks first that the
+/// screen be private, as its curves show the rolls' spread. Finishing short
+/// of the target is allowed after an emphatic warning; finishing with nothing
+/// secret is not (its digest is public).
 ///
 /// The rolls are handed to [onDone] and forgotten: the receiver owns them
 /// and wipes them ([DiceRolls.wipe]). Rolls typed are hidden by default.
@@ -77,7 +83,8 @@ class DragonDiceWizard extends StatefulWidget {
     this.onCue,
     this.title = 'Dragon Dice',
     this.purpose,
-    this.startAdvanced = false,
+    this.systemRandomByDefault = false,
+    this.feeds,
   });
 
   final double targetBits;
@@ -90,7 +97,12 @@ class DragonDiceWizard extends StatefulWidget {
 
   /// What the rolls are for, shown under the title.
   final String? purpose;
-  final bool startAdvanced;
+
+  /// Whether the system's randomness starts checked.
+  final bool systemRandomByDefault;
+
+  /// The peripheral sources offered, by source name; [platformFeeds] if null.
+  final Map<String, SensorFeed Function()>? feeds;
 
   @override
   State<DragonDiceWizard> createState() => _DragonDiceWizardState();
@@ -99,7 +111,8 @@ class DragonDiceWizard extends StatefulWidget {
 class _DragonDiceWizardState extends State<DragonDiceWizard> {
   DiceRolls _rolls = DiceRolls();
   int? _current;
-  late bool _advanced = widget.startAdvanced;
+  bool _advanced = false;
+  bool _private = false;
   bool _hidden = true;
   String? _error;
 
@@ -108,7 +121,11 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
   final TextEditingController _alpha = TextEditingController();
   EntropyMeasure _measure = EntropyMeasure.min;
   double _bound = kDefaultBound;
-  int _samples = kDefaultSamples;
+
+  late bool _systemRandom = widget.systemRandomByDefault;
+  final Map<String, Capture> _captures = <String, Capture>{};
+  late final Map<String, SensorFeed Function()> _feeds =
+      widget.feeds ?? platformFeeds();
 
   final TextEditingController _entry = TextEditingController();
   final FocusNode _entryFocus = FocusNode(debugLabel: 'dice-rolls');
@@ -121,23 +138,43 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
   double get _target => widget.targetBits;
 
   EstimatorSettings get _settings =>
-      EstimatorSettings(prior: _prior, measure: _measure, samples: _samples);
+      EstimatorSettings.forBound(_bound, prior: _prior, measure: _measure);
 
   /// Whether the estimate in hand is for the rolls and settings as they are.
   bool get _fresh => _estimates?.generation == _generation;
 
+  /// What the captures are credited, together.
+  double get _sourceBits => _captures.values
+      .fold<double>(0, (double sum, Capture c) => sum + c.credit.bits);
+
+  /// Dice (if fair) and sources.
+  double get _fairTotal => _rolls.fairBits + _sourceBits;
+
+  /// Whether anything secret is in: without it, the digest is public.
+  bool get _hasSecret =>
+      _rolls.rollCount > 0 || _captures.isNotEmpty || _systemRandom;
+
   bool get _ready {
+    if (_sourceBits >= _target) return true;
     if (_rolls.rollCount == 0) return false;
-    if (!_advanced) return _rolls.fairBits >= _target;
+    if (!_advanced) return _fairTotal >= _target;
     final _Estimates? e = _estimates;
     return _fresh && e != null && e.total.probabilityBelow(_target) <= _bound;
   }
 
   void _cue(String name) => widget.onCue?.call(name);
 
+  /// Cue the moment the rolls become ready.
+  void _cueIfReady() {
+    final bool ready = _ready;
+    if (ready && !_wasReady) _cue(DiceCue.ready);
+    _wasReady = ready;
+  }
+
   @override
   void dispose() {
     _rolls.wipe();
+    _captures.clear();
     _entry.dispose();
     _entryFocus.dispose();
     _alpha.dispose();
@@ -150,9 +187,8 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
   void _changed() {
     _generation++;
     _error = null;
-    final bool ready = _ready;
-    if (ready && !_wasReady) _cue(DiceCue.ready);
-    _wasReady = ready;
+    // In advanced mode, readiness waits for the estimate.
+    if (!_advanced) _cueIfReady();
     setState(() {});
     if (_advanced) _estimate();
   }
@@ -236,13 +272,13 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
 
   Future<void> _done() async {
     _cue(DiceCue.done);
-    if (_rolls.rollCount == 0) {
+    if (!_hasSecret) {
       _cue(DiceCue.badRoll);
-      setState(() => _error = 'No rolls yet: their digest would be public.');
+      setState(() => _error = 'Nothing secret yet: the digest would be public.');
       return;
     }
     if (!_ready) {
-      _cue(DiceCue.short);
+      _cue(DiceCue.warning);
       final bool go = await showDialog<bool>(
             context: context,
             builder: (BuildContext ctx) => _ShortDialog(message: _shortfall()),
@@ -251,8 +287,13 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
       if (!go || !mounted) return;
     }
     final DiceRolls out = _rolls;
+    for (final MapEntry<String, Capture> c in _captures.entries) {
+      out.setSource(c.key, c.value.digestHex);
+    }
+    if (_systemRandom) out.setSource(kSourceRandom, systemRandomHex());
     setState(() {
       _rolls = DiceRolls();
+      _captures.clear();
       _current = null;
       _estimates = null;
     });
@@ -261,14 +302,40 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
 
   String _shortfall() {
     final _Estimates? e = _estimates;
-    if (_advanced && e != null && _fresh) {
+    if (_advanced && e != null && _fresh && _rolls.rollCount > 0) {
       return 'There is a ${_pct(e.total.probabilityBelow(_target))} chance '
-          'these rolls carry less than ${_target.toStringAsFixed(0)} bits '
-          '(your bound: ${_pct(_bound)}).';
+          'the rolls and sources carry less than '
+          '${_target.toStringAsFixed(0)} bits (your bound: ${_pct(_bound)}).';
     }
-    return 'Even from fair dice these rolls carry only '
-        '${_rolls.fairBits.toStringAsFixed(1)} of '
-        '${_target.toStringAsFixed(0)} bits.';
+    return 'Even with fair dice, the rolls and sources carry only '
+        '${_fairTotal.toStringAsFixed(1)} of ${_target.toStringAsFixed(0)} '
+        'bits.';
+  }
+
+  // --- sources -----------------------------------------------------------------
+
+  void _setSystemRandom(bool on) {
+    _cue(DiceCue.source);
+    _systemRandom = on;
+    _changed();
+  }
+
+  Future<void> _captureSource(String source) async {
+    _cue(DiceCue.source);
+    final Capture? c = await captureSource(
+      context,
+      title: kSourceLabels[source]!,
+      feed: _feeds[source]!(),
+    );
+    if (c == null || !mounted) return;
+    _captures[source] = c;
+    _changed();
+  }
+
+  void _dropSource(String source) {
+    _cue(DiceCue.source);
+    _captures.remove(source);
+    _changed();
   }
 
   // --- the estimate ------------------------------------------------------------
@@ -285,20 +352,30 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
       ],
       current: c,
       settings: _settings,
+      sourceBits: _sourceBits,
       generation: generation,
     );
     final _Estimates e = await compute(_run, job);
     if (!mounted || e.generation != _generation) return;
-    final bool ready = _rolls.rollCount > 0 &&
-        e.total.probabilityBelow(_target) <= _bound;
-    if (ready && !_wasReady) _cue(DiceCue.ready);
-    _wasReady = ready;
-    setState(() => _estimates = e);
+    _estimates = e;
+    _cueIfReady();
+    setState(() {});
   }
 
-  void _setAdvanced(bool on) {
+  /// Advanced mode, once the user confirms the screen is private.
+  Future<void> _setAdvanced(bool on) async {
     _cue(DiceCue.advanced);
-    setState(() => _advanced = on);
+    if (on && !_private) {
+      _cue(DiceCue.warning);
+      final bool private = await showDialog<bool>(
+            context: context,
+            builder: (BuildContext ctx) => const _PrivateDialog(),
+          ) ??
+          false;
+      if (!private || !mounted) return;
+      _private = true;
+    }
+    _advanced = on;
     _changed();
   }
 
@@ -334,6 +411,8 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
             'empty line when done.',
             style: theme.textTheme.bodySmall,
           ),
+          const SizedBox(height: 8),
+          _sourcesRow(theme),
           const SizedBox(height: 12),
           Expanded(
             child: Row(
@@ -360,7 +439,7 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
               ),
               const SizedBox(width: 8),
               FilledButton(
-                onPressed: _rolls.rollCount == 0 ? null : _done,
+                onPressed: _hasSecret ? _done : null,
                 child: const Text('Done'),
               ),
             ],
@@ -369,6 +448,56 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
       ),
     );
   }
+
+  Widget _sourcesRow(ThemeData theme) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        Text('Also mix in:', style: theme.textTheme.bodySmall),
+        FilterChip(
+          label: Text(kSourceLabels[kSourceRandom]!),
+          tooltip: 'A backup: $kSystemRandomBytes bytes from the system\'s '
+              'random generator, mixed in but never counted.',
+          selected: _systemRandom,
+          onSelected: _setSystemRandom,
+        ),
+        for (final String s in kSources)
+          if (_feeds.containsKey(s)) _sourceChip(s),
+      ],
+    );
+  }
+
+  Widget _sourceChip(String source) {
+    final String label = kSourceLabels[source]!;
+    final Capture? c = _captures[source];
+    if (c == null) {
+      return ActionChip(
+        avatar: const Icon(Icons.add, size: 18),
+        label: Text(label),
+        tooltip: 'Capture the ${label.toLowerCase()}: it counts toward the '
+            'target.',
+        onPressed: () => _captureSource(source),
+      );
+    }
+    return InputChip(
+      label: Text('$label · ${_bits(c.credit.bits)}'),
+      tooltip: 'Capture again',
+      onPressed: () => _captureSource(source),
+      onDeleted: () => _dropSource(source),
+      deleteButtonTooltipMessage: 'Drop this capture',
+    );
+  }
+
+  /// Each capture and its credit, then the system's randomness if mixed in.
+  List<String> get _sourceParts => <String>[
+        for (final String s in kSources)
+          if (_captures[s] case final Capture c)
+            '${kSourceLabels[s]}: ${_bits(c.credit.bits)}',
+        if (_systemRandom)
+          '${kSourceLabels[kSourceRandom]}: mixed in, not counted',
+      ];
 
   Widget _diceColumn(ThemeData theme) {
     final int? c = _current;
@@ -477,18 +606,21 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
 
   Widget _estimateColumn(ThemeData theme) {
     if (!_advanced) {
-      final double share = (_rolls.fairBits / _target).clamp(0.0, 1.0);
+      final double share = (_fairTotal / _target).clamp(0.0, 1.0);
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            '${_rolls.fairBits.toStringAsFixed(1)} of '
-            '${_target.toStringAsFixed(0)} bits, if the dice are fair',
+            'Total ${_fairTotal.toStringAsFixed(1)} of '
+            '${_target.toStringAsFixed(0)} bits',
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(value: share, minHeight: 8),
+          const SizedBox(height: 8),
+          Text('Dice: ${_bits(_rolls.fairBits)} if fair'),
+          for (final String part in _sourceParts) Text(part),
           const SizedBox(height: 12),
           Text(
             'Advanced mode estimates instead how likely it is that biased dice '
@@ -522,6 +654,11 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
             '${_pct(e.total.probabilityBelow(_target))} chance below target '
             '(bound ${_pct(_bound)})${_fresh ? '' : ' · updating…'}',
             style: theme.textTheme.bodyMedium,
+          ),
+        if (_sourceParts.isNotEmpty)
+          Text(
+            'With ${_sourceParts.join(' · ')}',
+            style: theme.textTheme.bodySmall,
           ),
         if (e != null && c != null && e.perRollPosterior != null) ...<Widget>[
           const SizedBox(height: 8),
@@ -603,17 +740,6 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
           ],
           onChanged: (double? b) => _setting(() => _bound = b ?? _bound),
         ),
-        DropdownButton<int>(
-          value: _samples,
-          items: <DropdownMenuItem<int>>[
-            for (final int n in kSampleChoices)
-              DropdownMenuItem<int>(
-                value: n,
-                child: Text('${n ~/ _kThousand}k draws'),
-              ),
-          ],
-          onChanged: (int? n) => _setting(() => _samples = n ?? _samples),
-        ),
         TextButton(
           onPressed: () => showDialog<void>(
             context: context,
@@ -627,11 +753,11 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
 
   Widget _status(ThemeData theme) {
     final bool ready = _ready;
-    final String text = _rolls.rollCount == 0
-        ? 'No rolls yet.'
-        : ready
-            ? 'Ready — press Enter on an empty line, or Done.'
-            : _advanced && !_fresh
+    final String text = ready
+        ? 'Ready — press Enter on an empty line, or Done.'
+        : !_hasSecret
+            ? 'No rolls yet.'
+            : _advanced && !_fresh && _rolls.rollCount > 0
                 ? 'Estimating…'
                 : 'Not enough yet. ${_shortfall()}';
     return Row(
@@ -647,8 +773,7 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
   }
 }
 
-/// Thousands, for draw counts.
-const int _kThousand = 1000;
+String _bits(double v) => '${v.toStringAsFixed(1)} bits';
 
 /// [v] without a trailing `.0`.
 String _num(double v) =>
@@ -665,16 +790,17 @@ class _AdvancedHelp extends StatelessWidget {
     const List<(String, String)> items = <(String, String)>[
       (
         'The curve',
-        'How much entropy your rolls carry, allowing that the dice may be '
-            'biased. The red part falls short of the target; rolls are ready '
-            'when its share is at most the bound.'
+        'How much entropy your rolls and sources carry, allowing that the '
+            'dice may be biased. The red part falls short of the target; you '
+            'are ready when its share is at most the bound.'
       ),
       (
         'Prior (α)',
         'What you believe about a die before rolling it. Jeffreys (0.5) leans '
             'towards biased dice and needs the most rolls; Flat (1) finds '
             'every bias equally plausible; Near-fair (10) trusts the die '
-            'unless the rolls say otherwise. The rolls then update it.'
+            'unless the rolls say otherwise. The rolls then update it: '
+            'after α rolls per face, they weigh as much as the prior.'
       ),
       (
         'Min / Shannon',
@@ -687,9 +813,25 @@ class _AdvancedHelp extends StatelessWidget {
         'The highest chance of falling short of the target you accept.'
       ),
       (
-        'Draws',
-        'Monte Carlo samples behind the curve: more is smoother and slower. '
-            'They are not secret and carry nothing of your rolls.'
+        'How the curve is drawn',
+        'By sampling (Monte Carlo): the app draws possible biases of each '
+            'die from what its rolls allow, computes the entropy the rolls '
+            'carry under each, and plots where the draws fall. Exact '
+            'computation is impractical beyond a coin. 100 ÷ bound draws '
+            '(10 000 at 1 %) measure the chance of falling short to well '
+            'within the bound. The draws come from a fixed-seed pseudorandom '
+            'generator (xoshiro256**), not the system: the same rolls always '
+            'draw the same curve, nothing rests on randomness you may '
+            'distrust, and the draws carry nothing secret.'
+      ),
+      (
+        'Sources',
+        'A mouse, accelerometer or camera capture is credited with the '
+            'min-entropy NIST SP 800-90B\'s most-common-value test finds in '
+            'its jitter, and counts toward the target: the curve moves right '
+            'by its credit. The test assumes independent readings, which '
+            'sensors are not quite, so the credit is an estimate. System '
+            'randomness is a backup: mixed in, never counted.'
       ),
       (
         'Custom dice',
@@ -708,22 +850,55 @@ class _AdvancedHelp extends StatelessWidget {
       title: const Text('Advanced mode'),
       content: SizedBox(
         width: 520,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            for (final (String head, String body) in items) ...<Widget>[
-              Text(head, style: theme.textTheme.titleSmall),
-              Text(body, style: theme.textTheme.bodySmall),
-              const SizedBox(height: 8),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              for (final (String head, String body) in items) ...<Widget>[
+                Text(head, style: theme.textTheme.titleSmall),
+                Text(body, style: theme.textTheme.bodySmall),
+                const SizedBox(height: 8),
+              ],
             ],
-          ],
+          ),
         ),
       ),
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+}
+
+/// The emphatic warning before advanced mode: its curves leak.
+class _PrivateDialog extends StatelessWidget {
+  const _PrivateDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return AlertDialog(
+      icon: Icon(Icons.visibility_off, color: scheme.error, size: 40),
+      title: Text('PRIVATE SCREEN ONLY', style: TextStyle(color: scheme.error)),
+      content: const Text(
+        'Advanced mode draws curves from your rolls. Their shape shows how '
+        'often each face came up, which gives part of your secret to anyone '
+        'who sees the screen.\n\nTurn it on only where no one, and no '
+        'camera, can see this screen.',
+      ),
+      actions: <Widget>[
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Stay vanilla'),
+        ),
+        TextButton(
+          style: TextButton.styleFrom(foregroundColor: scheme.error),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('The screen is private'),
         ),
       ],
     );
@@ -769,12 +944,16 @@ class _Job {
     required this.rolls,
     required this.current,
     required this.settings,
+    required this.sourceBits,
     required this.generation,
   });
 
   final List<({int faces, List<int> rolls})> rolls;
   final int? current;
   final EstimatorSettings settings;
+
+  /// What the sources add to the dice.
+  final double sourceBits;
   final int generation;
 }
 
@@ -786,6 +965,7 @@ class _Estimates {
     required this.generation,
   });
 
+  /// Dice and sources.
   final EntropyDistribution total;
   final EntropyDistribution? perRollPrior;
   final EntropyDistribution? perRollPosterior;
@@ -800,8 +980,11 @@ _Estimates _run(_Job job) {
   final int? c = job.current;
   final DieRolls? current =
       c == null || c >= rolls.dice.length ? null : rolls.dice[c];
+  final EntropyDistribution dice = totalEntropy(rolls, job.settings);
   final _Estimates out = _Estimates(
-    total: totalEntropy(rolls, job.settings),
+    total: EntropyDistribution(<double>[
+      for (final double bits in dice.samples) bits + job.sourceBits,
+    ]),
     perRollPrior:
         current == null ? null : perRollPrior(current.die, job.settings),
     perRollPosterior:

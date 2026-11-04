@@ -51,7 +51,7 @@ which are as secret as the rolls; a dice-only digest needs only the rolls.
 ## A capture's digest
 
 A peripheral capture is a run of readings, each a few integer channels (a
-mouse: position and time between moves; an accelerometer: x, y, z and time; a
+mouse: position and time of each move; an accelerometer: x, y, z and time; a
 camera: the brightness of a sparse grid of pixels, frame after frame). Its
 digest is the SHA-512 of the readings, each value a big-endian 64-bit integer,
 reading after reading. Only that digest enters the JSON.

@@ -38,6 +38,9 @@ vanilla flow: register enough rolls and press Enter. If you press it sooner,
 you are warned, emphatically, and may go on anyway.
 
 The desktop app (`app/`) does the same in a window, with the curve drawn.
+It can also mix in captures of the mouse, the accelerometer and the camera,
+each credited toward the target, and the system's randomness as a backup
+that is never counted ([doc/ADVANCED.md](doc/ADVANCED.md#sources)).
 
 ## What you get
 
@@ -66,13 +69,16 @@ well-shuffled deck. See [doc/ADVANCED.md](doc/ADVANCED.md).
 rolls themselves, how likely is it that the dice are biased enough to carry
 less than the target? You roll until the curve sits clearly past the target
 and the chance of falling short is under your bound (1 % by default). That
-takes about twice the rolls of the vanilla flow for a 32-bit target. Every
-field is explained in [doc/ADVANCED.md](doc/ADVANCED.md).
+takes about twice the rolls of the vanilla flow for a 32-bit target. Its
+curve shows how your rolls are spread, so it asks for a private screen
+first. Every field, and how the curve is computed, is explained in
+[doc/ADVANCED.md](doc/ADVANCED.md).
 
 ## Where it is used
 
 Great Wall's wallet enters a map's 32-bit point with the Dragon Dice wizard
-(`ui/`), and Great Wall's provisional keys and Star Clock secrets are next.
+(`ui/`), to a 40-bit target ([doc/FORMAT.md](doc/FORMAT.md#from-the-digest)
+says why). Great Wall's provisional keys and Star Clock secrets are next.
 
 ## Layout
 
@@ -80,7 +86,7 @@ Great Wall's wallet enters a map's 32-bit point with the Dragon Dice wizard
 |---|---|
 | `lib/` | the engine: dice, canonical JSON, digest, estimator, BIP39 |
 | `bin/dragon_dice.dart` | the terminal app |
-| `ui/` | Flutter: the dice wizard and its curve, for apps |
+| `ui/` | Flutter: the dice wizard, its curve and the peripheral captures, for apps |
 | `app/` | Flutter: the desktop app |
 | `test_vectors/` | frozen vectors of the format |
 | `doc/` | the format and the advanced mode |

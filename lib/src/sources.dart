@@ -9,7 +9,7 @@ import 'dice.dart';
 /// system's randomness.
 ///
 /// A capture is a run of readings, each a few integer channels (a mouse: x, y
-/// and the time between moves; an accelerometer: x, y, z and the time; a
+/// and the time of each move; an accelerometer: x, y, z and the time; a
 /// camera: the brightness of a sparse grid of pixels, frame after frame). Only
 /// its SHA-512 enters the rolls JSON; the readings are wiped.
 

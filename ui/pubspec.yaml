@@ -14,6 +14,11 @@ dependencies:
     sdk: flutter
   dragon_dice:
     path: ..
+  # Peripheral sources, each where its platform has it: the accelerometer
+  # (phones, tablets) and the camera (flutter_webrtc on every native platform,
+  # as Great Wall's desktop QR scanner).
+  sensors_plus: ^7.1.1
+  flutter_webrtc: ^1.5.0
 
 dev_dependencies:
   flutter_test:
