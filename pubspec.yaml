@@ -1,0 +1,20 @@
+name: dragon_dice
+description: >-
+  Dice entropy you can audit: rolls of real dice hashed as canonical JSON with
+  SHA-512, a Bayesian estimate of the entropy they carry, and BIP39 output.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  # SHA-512 (the digest) and SHA-256 (the BIP39 checksum), pure Dart.
+  crypto: ^3.0.3
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+executables:
+  dragon_dice:

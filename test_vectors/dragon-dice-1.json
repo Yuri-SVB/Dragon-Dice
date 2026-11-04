@@ -1,0 +1,48 @@
+{
+  "format": "dragon-dice/1",
+  "note": "SHA-512 of the UTF-8 canonical JSON; BIP39 of its first 128 / 256 bits.",
+  "cases": [
+    {
+      "json": "{\"dice\":[],\"format\":\"dragon-dice/1\"}",
+      "sha512": "549ce4b2e5fcaec910b2ce8d032e71cfa21f0ac598d4219584437ce78f5bc9d7685afdc202ec0455a15661c3651bb56f7e80d79ac0ee924780b69964434a9393",
+      "bip39_128": "fee transfer coach slogan slab goose drift flush minimum bonus organ oyster",
+      "bip39_256": "fee transfer coach slogan slab goose drift flush minimum bonus organ palm capable lyrics biology box canoe promote awkward what jump pupil chef this"
+    },
+    {
+      "json": "{\"dice\":[{\"faces\":2,\"rolls\":[1,2,2,1,1,2,1,2]}],\"format\":\"dragon-dice/1\"}",
+      "sha512": "69e0f73c6212274d6a3cdc389192da6951a4c06b6788792092b84857572356c14af247e0553fbfcbf71d7eadd1d5e29215c0a3bc30e14643972f1a9c8d2295db",
+      "bip39_128": "hazard amateur someone service carbon pluck pottery oppose decade milk repair spot",
+      "bip39_256": "hazard amateur someone service carbon pluck pottery oppose decade milk repair sport bottom gasp pulse valve junior afraid puppy mouse install museum force choose"
+    },
+    {
+      "json": "{\"dice\":[{\"faces\":6,\"rolls\":[3,1,6]}],\"format\":\"dragon-dice/1\"}",
+      "sha512": "ee2dab6ce39e4f9f24d1321e4ef488e58c5db55c33b04dd099f9833b0a5be16402b63ab1032a28125ce07b3249cc3c920358d611fa70d54aa79309ab2a8690ac",
+      "bip39_128": "until hood swamp shrimp top sort nation chaos bundle jeans captain ski",
+      "bip39_256": "until hood swamp shrimp top sort nation chaos bundle jeans captain slam shift survey ignore invite evidence luggage lazy all radar combine machine normal"
+    },
+    {
+      "json": "{\"dice\":[{\"faces\":20,\"rolls\":[1,2,3,4,5,6,7,8]}],\"format\":\"dragon-dice/1\"}",
+      "sha512": "3678a343d47cebe9e8f4cd32ab0a282d554eee914c5b7ce8f498c282aa66bc2b0ee5c2bd96ae52fa2086967ad25461312eee25410082896276b58775e88cea75",
+      "bip39_128": "cushion shallow special pottery solid visual phrase often crawl flame meat forum",
+      "bip39_256": "cushion shallow special pottery solid visual phrase often crawl flame meat follow female jar early merge language element change lunar click crew vague laugh"
+    },
+    {
+      "json": "{\"dice\":[{\"faces\":6,\"rolls\":[3,1,6]},{\"faces\":20,\"rolls\":[17,2]}],\"format\":\"dragon-dice/1\"}",
+      "sha512": "63e255a057488956907507baabd2eb58f48c406ffdd1ce291722e7c5dbd104738781840ee1828ebec2475ee1b3592f53ab5405874326496713c356aacf1d5e4b",
+      "bip39_128": "glue bargain gym purse mass prize dove path rival future river rapid",
+      "bip39_256": "glue bargain gym purse mass prize dove path rival future river rapid emotion cage say riot soda emerge silly sort frozen trigger balcony grape"
+    },
+    {
+      "json": "{\"dice\":[{\"faces\":4,\"rolls\":[4,4,1]},{\"faces\":8,\"rolls\":[8,1]},{\"faces\":10,\"rolls\":[10,1,5]},{\"faces\":12,\"rolls\":[12,11]},{\"faces\":6,\"rolls\":[]}],\"format\":\"dragon-dice/1\"}",
+      "sha512": "4ca53c5ddbcae311bb24084c5db3a5feb3b0d00b6bdfc1b26a52d220e0d929b73e7654302c4704deef3deccf308f1c03f814c7bdf6517136038d131e10bdef41",
+      "bip39_128": "erosion clarify blast resource purchase match uncle library era unique truly wood",
+      "bip39_256": "erosion clarify blast resource purchase match uncle library era unique truly word deposit gym color know script nation net picture asthma hold plug toilet"
+    },
+    {
+      "json": "{\"dice\":[{\"faces\":52,\"rolls\":[52,1,26,13]}],\"format\":\"dragon-dice/1\"}",
+      "sha512": "09e6365c14f4057dc670a0ce7d05e566e631e18c794ecee13392e6de5874804c916f0c2db1587388b47b0845355c15fce008174f11f990cd3553d7e36aa662cd",
+      "bip39_128": "antique coyote novel clarify doctor same border beef solar trial junk smooth",
+      "bip39_256": "antique coyote novel clarify doctor same border beef solar trial junk soccer glide valid cradle clap solve another tool soap tortoise demise abuse now"
+    }
+  ]
+}
