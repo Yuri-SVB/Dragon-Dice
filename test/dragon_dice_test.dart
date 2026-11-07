@@ -221,8 +221,9 @@ void main() {
         noisy.add(<int>[rng.nextInt(1 << 20)]);
       }
       final SensorCredit c = noisy.credit();
-      expect(c.perSymbol, greaterThan(6));
-      expect(c.bits, closeTo(c.symbols * c.perSymbol, 1e-9));
+      expect(c.perSymbol, kMaxBitsPerReading,
+          reason: 'however varied, a reading is worth one bit at most');
+      expect(c.bits, closeTo(c.symbols * kMaxBitsPerReading, 1e-9));
       final SensorCapture few = SensorCapture(1)..add(<int>[1])..add(<int>[9]);
       expect(few.credit().bits, 0, reason: 'too few symbols');
       expect(noisy.digestHex(), hasLength(2 * kDigestBytes));
@@ -230,6 +231,32 @@ void main() {
       noisy.wipe();
       expect(noisy.length, 0);
       expect(d, isNot(noisy.digestHex()));
+    });
+
+    test('one bit per move at most, one move per 10 ms, time not credited',
+        () {
+      // A busy device: a reading every millisecond, random values.
+      const int readings = 2000;
+      const int periodUs = 1000;
+      final math.Random rng = math.Random(2);
+      final SensorCapture busy = SensorCapture(3, timeChannel: 2);
+      for (int i = 0; i < readings; i++) {
+        busy.add(<int>[rng.nextInt(1 << 12), rng.nextInt(1 << 12), i * periodUs]);
+      }
+      const int counted = readings * periodUs ~/ kMinReadingIntervalUs;
+      const int secondDifferenceSpan = 2;
+      expect(busy.credit().symbols, counted - secondDifferenceSpan);
+      expect(busy.credit().bits, counted - secondDifferenceSpan);
+      // A steady acceleration, its clock jittering (every reading counted):
+      // nothing.
+      const int jitterUs = 999;
+      const int spacedUs = kMinReadingIntervalUs + jitterUs + 1;
+      final SensorCapture smooth = SensorCapture(2, timeChannel: 1);
+      for (int i = 0; i < readings; i++) {
+        smooth.add(<int>[i * i, i * spacedUs + rng.nextInt(jitterUs)]);
+      }
+      expect(smooth.credit().symbols, readings - secondDifferenceSpan);
+      expect(smooth.credit().bits, 0);
     });
 
     test('system randomness: 1 KiB as hex', () {

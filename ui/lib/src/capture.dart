@@ -25,6 +25,11 @@ abstract class SensorFeed {
   /// Values per reading.
   int get channels;
 
+  /// The channel holding each reading's time in microseconds, if any: not
+  /// credited, and at most one reading counted per
+  /// [kMinReadingIntervalUs].
+  int? get timeChannel => null;
+
   /// What to do while it captures.
   String get hint;
 
@@ -71,6 +76,9 @@ class PointerFeed extends SensorFeed {
   /// x, y, time.
   @override
   int get channels => 3;
+
+  @override
+  int get timeChannel => 2;
 
   @override
   String get hint => 'Move the mouse, or a finger, over the pad, erratically, '
@@ -121,6 +129,9 @@ class AccelerometerFeed extends SensorFeed {
   /// x, y, z, time.
   @override
   int get channels => 4;
+
+  @override
+  int get timeChannel => 3;
 
   @override
   String get hint => 'Shake or tap the device, or rest it on something that '
@@ -292,7 +303,10 @@ class _CaptureDialog extends StatefulWidget {
 }
 
 class _CaptureDialogState extends State<_CaptureDialog> {
-  late final SensorCapture _capture = SensorCapture(widget.feed.channels);
+  late final SensorCapture _capture = SensorCapture(
+    widget.feed.channels,
+    timeChannel: widget.feed.timeChannel,
+  );
   SensorCredit _credit = sensorCredit(const <List<int>>[]);
   Timer? _refresh;
   String? _error;

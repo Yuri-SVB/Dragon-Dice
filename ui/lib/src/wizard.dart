@@ -775,6 +775,9 @@ class _DragonDiceWizardState extends State<DragonDiceWizard> {
 
 String _bits(double v) => '${v.toStringAsFixed(1)} bits';
 
+/// Microseconds in a millisecond.
+const int _kMicrosPerMilli = 1000;
+
 /// [v] without a trailing `.0`.
 String _num(double v) =>
     v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
@@ -787,7 +790,7 @@ class _AdvancedHelp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const List<(String, String)> items = <(String, String)>[
+    final List<(String, String)> items = <(String, String)>[
       (
         'The curve',
         'How much entropy your rolls and sources carry, allowing that the '
@@ -826,11 +829,12 @@ class _AdvancedHelp extends StatelessWidget {
       ),
       (
         'Sources',
-        'A mouse, accelerometer or camera capture is credited with the '
-            'min-entropy NIST SP 800-90B\'s most-common-value test finds in '
-            'its jitter, and counts toward the target: the curve moves right '
-            'by its credit. The test assumes independent readings, which '
-            'sensors are not quite, so the credit is an estimate. System '
+        'A mouse, accelerometer or camera capture counts toward the target: '
+            'the curve moves right by its credit. Each reading — a move, a '
+            'frame — is worth at most ${_num(kMaxBitsPerReading)} bit, and less when '
+            'NIST SP 800-90B\'s most-common-value test finds it predictable '
+            'from the moves before; at most one reading counts per '
+            '${kMinReadingIntervalUs ~/ _kMicrosPerMilli} ms. System '
             'randomness is a backup: mixed in, never counted.'
       ),
       (

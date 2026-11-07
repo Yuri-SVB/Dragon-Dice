@@ -133,25 +133,36 @@ with the entropy it carries:
 Only the capture's SHA-512 enters the rolls JSON
 ([FORMAT.md](FORMAT.md)); the readings are wiped.
 
-**Credit.** Each channel of a capture (the x of the mouse, one pixel of the
-camera, …) is reduced to symbols: the low byte of each reading's change from
-the previous one. That strips steady signal and drift and keeps the jitter.
-The symbols' min-entropy is estimated by the **most common value** test of
-NIST SP 800-90B (§6.3.1): with `p̂` the frequency of the commonest symbol
-among `n`,
+**Credit: at most 1 bit per reading.** A reading is a mouse move, an
+accelerometer sample or a camera frame.
 
-```text
-p_u = min(1, p̂ + 2.576 · √(p̂(1 − p̂) / (n − 1)))      bits per symbol = −log₂ p_u
-```
+- **Readings counted:** at most one per 10 ms, by the reading's time, so a
+  fast-polling device earns no more than a slow one for the same motion. The
+  time is never credited: it mostly shows the device's polling.
+- **One symbol per reading:** how it departs from the previous move — the
+  second difference `vₖ − 2vₖ₋₁ + vₖ₋₂` of each value (x and y; x, y and z;
+  each pixel of the grid), its low byte, all values together. A steady stroke
+  or a still scene gives one symbol over and over, so nothing.
+- **Bits per symbol:** the **most common value** test of NIST SP 800-90B
+  (§6.3.1). With `p̂` the frequency of the commonest symbol among `n`:
 
-`p_u` is the 99 % upper confidence bound of `p̂`. A channel is credited its
-symbols times that figure, if it has at least 64 symbols; the channels are
-summed. The capture dialog shows the credit live; you stop when it suffices.
+  ```text
+  p_u = min(1, p̂ + 2.576 · √(p̂(1 − p̂) / (n − 1)))      bits per symbol = −log₂ p_u
+  ```
 
-The test assumes independent symbols, and sensors are not quite: a smooth
-mouse stroke repeats its steps, a camera's pixels share the light. The
-credit is an estimate, not a guarantee — which is why it is shown per source,
-next to the dice, for you to weigh.
+  `p_u` is the 99 % upper confidence bound of `p̂`.
+- **Credit:** the symbols times that figure, **capped at 1 bit per symbol**,
+  and nothing below 64 symbols. The capture dialog shows it live; you stop
+  when it suffices.
+
+Why the cap: the test assumes independent symbols, and sensors are not — a
+hand moves smoothly, a camera's pixels share the light. Without a cap, a few
+seconds of scribbling were credited thousands of bits. Informal estimates
+put a mouse position at a bit or two (Keybase's `more-entropy`); one bit per
+move, at most 100 a second, stays below them. So 40 bits take about a second
+of moving the mouse, and a frame of camera noise counts like a move. The
+credit is still an estimate, not a guarantee — which is why it is shown per
+source, next to the dice, for you to weigh.
 
 **Counting.** The captures' credits add to the dice: in vanilla mode to the
 dice's fair entropy; in advanced mode, they move the curve right. No source
