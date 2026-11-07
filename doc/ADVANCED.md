@@ -128,30 +128,48 @@ with the entropy it carries:
 |---|---|---|
 | Mouse | position (physical pixels) and time (µs) of each move over a pad | everywhere (a finger on a touch screen) |
 | Accelerometer | x, y, z (m/s², 16 fractional bits) and time (µs) | phones, tablets |
-| Camera | brightness (r + g + b) of a 16 × 12 grid of pixels, per frame | where a camera is found |
+| Camera | brightness (r + g + b) of a 16 × 12 grid of pixels, and the time (µs), per frame | where a camera is found |
 
 Only the capture's SHA-512 enters the rolls JSON
 ([FORMAT.md](FORMAT.md)); the readings are wiped.
 
-**Credit.** Each channel of a capture (the x of the mouse, one pixel of the
-camera, …) is reduced to symbols: the low byte of each reading's change from
-the previous one. That strips steady signal and drift and keeps the jitter.
-The symbols' min-entropy is estimated by the **most common value** test of
-NIST SP 800-90B (§6.3.1): with `p̂` the frequency of the commonest symbol
-among `n`,
+**Credit: at most 1 bit per reading.** A reading is a mouse move, an
+accelerometer sample or a camera frame.
 
-```text
-p_u = min(1, p̂ + 2.576 · √(p̂(1 − p̂) / (n − 1)))      bits per symbol = −log₂ p_u
-```
+- **Readings counted:** at most one per 33 ms (about 30 a second), by the
+  reading's time: a hand's choices change over tens of milliseconds, so
+  closer readings repeat them, and a fast-polling device earns no more than a
+  slow one. And only after a real move since the last counted reading: 8
+  pixels for the mouse, 0.5 m/s² for the accelerometer, a change of 8 in
+  some pixel's brightness for the camera (so a repeated frame does not
+  count). The time is never credited: it mostly shows the device's polling.
+- **One symbol per reading:** how it departs from the previous move — the
+  second difference `vₖ − 2vₖ₋₁ + vₖ₋₂` of each value (x and y; x, y and z;
+  each pixel of the grid), its low byte, all values together. A steady stroke
+  or a still scene gives one symbol over and over, so nothing.
+- **Bits per symbol:** the **most common value** test of NIST SP 800-90B
+  (§6.3.1). With `p̂` the frequency of the commonest symbol among `n`:
 
-`p_u` is the 99 % upper confidence bound of `p̂`. A channel is credited its
-symbols times that figure, if it has at least 64 symbols; the channels are
-summed. The capture dialog shows the credit live; you stop when it suffices.
+  ```text
+  p_u = min(1, p̂ + 2.576 · √(p̂(1 − p̂) / (n − 1)))      bits per symbol = −log₂ p_u
+  ```
 
-The test assumes independent symbols, and sensors are not quite: a smooth
-mouse stroke repeats its steps, a camera's pixels share the light. The
-credit is an estimate, not a guarantee — which is why it is shown per source,
-next to the dice, for you to weigh.
+  `p_u` is the 99 % upper confidence bound of `p̂`.
+- **Credit:** the symbols times that figure, **capped at 1 bit per symbol**,
+  and nothing below 64 symbols. The capture dialog shows it live; you stop
+  when it suffices.
+
+Why: the test assumes independent symbols, and sensors are not — a hand
+moves smoothly, a camera's pixels share the light. Without these rules, a few
+seconds of scribbling were credited thousands of bits. The estimates the
+cap rests on were taken at a similar pace: X41 (2025) found about 1.5 bits
+per point in real mouse traces sampled at 30 to 60 a second, VeraCrypt
+credits 1 bit per mouse move, Keybase's `more-entropy` "a bit or two". The
+goal is not to slow you down but to credit only what a hand really adds:
+brisk mouse strokes earn about 20 to 25 bits a second, so 40 bits take two
+seconds or so; slow strokes earn little. The credit is still an estimate,
+not a guarantee — which is why it is shown per source, next to the dice, for
+you to weigh.
 
 **Counting.** The captures' credits add to the dice: in vanilla mode to the
 dice's fair entropy; in advanced mode, they move the curve right. No source
