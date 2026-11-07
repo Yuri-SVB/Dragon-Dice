@@ -10,8 +10,8 @@ import 'dice.dart';
 ///
 /// A capture is a run of readings, each a few integer channels (a mouse: x, y
 /// and the time of each move; an accelerometer: x, y, z and the time; a
-/// camera: the brightness of a sparse grid of pixels, frame after frame). Only
-/// its SHA-512 enters the rolls JSON; the readings are wiped.
+/// camera: the brightness of a sparse grid of pixels and the time, frame after
+/// frame). Only its SHA-512 enters the rolls JSON; the readings are wiped.
 
 /// The z-value of NIST SP 800-90B's 99 % upper confidence bound.
 const double _kZ99 = 2.576;
@@ -26,9 +26,11 @@ const int kMinSensorSymbols = 64;
 const double kMaxBitsPerReading = 1;
 
 /// A reading closer than this to the last counted one, in microseconds, is
-/// not counted: a fast-polling device earns no more than a slow one for the
-/// same motion.
-const int kMinReadingIntervalUs = 10000;
+/// not counted (about 30 a second): a hand's choices change over tens of
+/// milliseconds, so closer readings repeat them, and a fast-polling device
+/// earns no more than a slow one. The per-reading estimates the cap rests on
+/// were taken at 30 to 60 a second (X41, 2025).
+const int kMinReadingIntervalUs = 33000;
 
 /// The symbol alphabet: a byte.
 const int _kByteMask = 0xff;
@@ -62,7 +64,9 @@ typedef SensorCredit = ({double bits, int symbols, double perSymbol});
 /// credited: at most [kMaxBitsPerReading] per reading counted.
 ///
 /// - **Counted readings:** with a [timeChannel] (microseconds), at most one
-///   per [kMinReadingIntervalUs]. The time itself is never credited: it
+///   per [kMinReadingIntervalUs]; and only once some value has moved by at
+///   least [minStep] since the last counted reading, so that small wiggles
+///   and repeated frames do not count. The time itself is never credited: it
 ///   mostly shows the device's polling.
 /// - **One symbol per reading:** how it departs from the previous move — the
 ///   second difference of each other channel, its low byte — all channels
@@ -70,15 +74,28 @@ typedef SensorCredit = ({double bits, int symbols, double perSymbol});
 /// - **Credit:** the symbols' [mcvMinEntropy], capped at
 ///   [kMaxBitsPerReading], times their number; nothing below
 ///   [kMinSensorSymbols] symbols.
-SensorCredit sensorCredit(List<List<int>> channels, {int? timeChannel}) {
+SensorCredit sensorCredit(
+  List<List<int>> channels, {
+  int? timeChannel,
+  int minStep = 0,
+}) {
   final int n = channels.isEmpty ? 0 : channels.first.length;
   final List<int> counted = <int>[];
-  int? last;
   for (int r = 0; r < n; r++) {
-    if (timeChannel != null) {
-      final int t = channels[timeChannel][r];
-      if (last != null && t - last < kMinReadingIntervalUs) continue;
-      last = t;
+    if (counted.isNotEmpty) {
+      final int last = counted.last;
+      if (timeChannel != null &&
+          channels[timeChannel][r] - channels[timeChannel][last] <
+              kMinReadingIntervalUs) {
+        continue;
+      }
+      int moved = 0;
+      for (int c = 0; c < channels.length; c++) {
+        if (c != timeChannel) {
+          moved = math.max(moved, (channels[c][r] - channels[c][last]).abs());
+        }
+      }
+      if (moved < minStep) continue;
     }
     counted.add(r);
   }
@@ -109,11 +126,15 @@ SensorCredit sensorCredit(List<List<int>> channels, {int? timeChannel}) {
 /// channels, in time order; [timeChannel], if any, holds each reading's time
 /// in microseconds.
 class SensorCapture {
-  SensorCapture(this.channels, {this.timeChannel})
+  SensorCapture(this.channels, {this.timeChannel, this.minStep = 0})
       : _readings = List<List<int>>.generate(channels, (_) => <int>[]);
 
   final int channels;
   final int? timeChannel;
+
+  /// The move a reading needs, in its values' units, to be counted
+  /// ([sensorCredit]).
+  final int minStep;
   final List<List<int>> _readings;
 
   /// Readings taken.
@@ -130,7 +151,11 @@ class SensorCapture {
   }
 
   /// What the capture is credited ([sensorCredit]).
-  SensorCredit credit() => sensorCredit(_readings, timeChannel: timeChannel);
+  SensorCredit credit() => sensorCredit(
+        _readings,
+        timeChannel: timeChannel,
+        minStep: minStep,
+      );
 
   /// SHA-512 of the readings, each value a big-endian 64-bit integer, reading
   /// after reading: what enters the rolls JSON, as lowercase hex.

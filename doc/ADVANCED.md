@@ -128,7 +128,7 @@ with the entropy it carries:
 |---|---|---|
 | Mouse | position (physical pixels) and time (µs) of each move over a pad | everywhere (a finger on a touch screen) |
 | Accelerometer | x, y, z (m/s², 16 fractional bits) and time (µs) | phones, tablets |
-| Camera | brightness (r + g + b) of a 16 × 12 grid of pixels, per frame | where a camera is found |
+| Camera | brightness (r + g + b) of a 16 × 12 grid of pixels, and the time (µs), per frame | where a camera is found |
 
 Only the capture's SHA-512 enters the rolls JSON
 ([FORMAT.md](FORMAT.md)); the readings are wiped.
@@ -136,9 +136,13 @@ Only the capture's SHA-512 enters the rolls JSON
 **Credit: at most 1 bit per reading.** A reading is a mouse move, an
 accelerometer sample or a camera frame.
 
-- **Readings counted:** at most one per 10 ms, by the reading's time, so a
-  fast-polling device earns no more than a slow one for the same motion. The
-  time is never credited: it mostly shows the device's polling.
+- **Readings counted:** at most one per 33 ms (about 30 a second), by the
+  reading's time: a hand's choices change over tens of milliseconds, so
+  closer readings repeat them, and a fast-polling device earns no more than a
+  slow one. And only after a real move since the last counted reading: 8
+  pixels for the mouse, 0.5 m/s² for the accelerometer, a change of 8 in
+  some pixel's brightness for the camera (so a repeated frame does not
+  count). The time is never credited: it mostly shows the device's polling.
 - **One symbol per reading:** how it departs from the previous move — the
   second difference `vₖ − 2vₖ₋₁ + vₖ₋₂` of each value (x and y; x, y and z;
   each pixel of the grid), its low byte, all values together. A steady stroke
@@ -155,14 +159,17 @@ accelerometer sample or a camera frame.
   and nothing below 64 symbols. The capture dialog shows it live; you stop
   when it suffices.
 
-Why the cap: the test assumes independent symbols, and sensors are not — a
-hand moves smoothly, a camera's pixels share the light. Without a cap, a few
-seconds of scribbling were credited thousands of bits. Informal estimates
-put a mouse position at a bit or two (Keybase's `more-entropy`); one bit per
-move, at most 100 a second, stays below them. So 40 bits take about a second
-of moving the mouse, and a frame of camera noise counts like a move. The
-credit is still an estimate, not a guarantee — which is why it is shown per
-source, next to the dice, for you to weigh.
+Why: the test assumes independent symbols, and sensors are not — a hand
+moves smoothly, a camera's pixels share the light. Without these rules, a few
+seconds of scribbling were credited thousands of bits. The estimates the
+cap rests on were taken at a similar pace: X41 (2025) found about 1.5 bits
+per point in real mouse traces sampled at 30 to 60 a second, VeraCrypt
+credits 1 bit per mouse move, Keybase's `more-entropy` "a bit or two". The
+goal is not to slow you down but to credit only what a hand really adds:
+brisk mouse strokes earn about 20 to 25 bits a second, so 40 bits take two
+seconds or so; slow strokes earn little. The credit is still an estimate,
+not a guarantee — which is why it is shown per source, next to the dice, for
+you to weigh.
 
 **Counting.** The captures' credits add to the dice: in vanilla mode to the
 dice's fair entropy; in advanced mode, they move the curve right. No source

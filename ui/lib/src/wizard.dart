@@ -833,8 +833,10 @@ class _AdvancedHelp extends StatelessWidget {
             'the curve moves right by its credit. Each reading — a move, a '
             'frame — is worth at most ${_num(kMaxBitsPerReading)} bit, and less when '
             'NIST SP 800-90B\'s most-common-value test finds it predictable '
-            'from the moves before; at most one reading counts per '
-            '${kMinReadingIntervalUs ~/ _kMicrosPerMilli} ms. System '
+            'from the moves before. A reading counts only after a real move '
+            '(a mouse: $kMouseMinStepPx pixels), and at most one per '
+            '${kMinReadingIntervalUs ~/ _kMicrosPerMilli} ms: the per-reading '
+            'estimates this rests on were taken at that pace. System '
             'randomness is a backup: mixed in, never counted.'
       ),
       (

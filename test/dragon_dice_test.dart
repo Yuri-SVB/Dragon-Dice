@@ -233,17 +233,18 @@ void main() {
       expect(d, isNot(noisy.digestHex()));
     });
 
-    test('one bit per move at most, one move per 10 ms, time not credited',
+    test('one bit per move at most, one move per 33 ms, time not credited',
         () {
       // A busy device: a reading every millisecond, random values.
-      const int readings = 2000;
+      const int readings = 4000;
       const int periodUs = 1000;
       final math.Random rng = math.Random(2);
       final SensorCapture busy = SensorCapture(3, timeChannel: 2);
       for (int i = 0; i < readings; i++) {
         busy.add(<int>[rng.nextInt(1 << 12), rng.nextInt(1 << 12), i * periodUs]);
       }
-      const int counted = readings * periodUs ~/ kMinReadingIntervalUs;
+      // Readings at 0, 33 ms, 66 ms, …: the first, then one per interval.
+      const int counted = (readings - 1) * periodUs ~/ kMinReadingIntervalUs + 1;
       const int secondDifferenceSpan = 2;
       expect(busy.credit().symbols, counted - secondDifferenceSpan);
       expect(busy.credit().bits, counted - secondDifferenceSpan);
@@ -257,6 +258,43 @@ void main() {
       }
       expect(smooth.credit().symbols, readings - secondDifferenceSpan);
       expect(smooth.credit().bits, 0);
+    });
+
+    test('only real moves count: small wiggles and repeats do not', () {
+      const int minStep = 8;
+      const int readings = 400;
+      const int wiggle = minStep - 1;
+      final math.Random rng = math.Random(3);
+      // A reading every 40 ms, so the interval counts them all.
+      const int periodUs = kMinReadingIntervalUs + 7000;
+      final SensorCapture small =
+          SensorCapture(3, timeChannel: 2, minStep: minStep);
+      final SensorCapture large =
+          SensorCapture(3, timeChannel: 2, minStep: minStep);
+      int x = 0;
+      int y = 0;
+      for (int i = 0; i < readings; i++) {
+        small.add(<int>[
+          rng.nextInt(wiggle + 1),
+          rng.nextInt(wiggle + 1),
+          i * periodUs,
+        ]);
+        x += minStep + rng.nextInt(1 << 6);
+        y -= minStep + rng.nextInt(1 << 6);
+        large.add(<int>[x, y, i * periodUs]);
+      }
+      expect(small.credit().bits, 0, reason: 'never moved by $minStep');
+      expect(large.credit().bits, readings - 2,
+          reason: 'every reading a real move: a bit each');
+      // A frame repeated is not a move.
+      final SensorCapture frames = SensorCapture(2, minStep: minStep);
+      for (int i = 0; i < readings; i++) {
+        final List<int> f = <int>[rng.nextInt(1 << 8), rng.nextInt(1 << 8)];
+        frames
+          ..add(f)
+          ..add(f);
+      }
+      expect(frames.credit().symbols, lessThanOrEqualTo(readings));
     });
 
     test('system randomness: 1 KiB as hex', () {

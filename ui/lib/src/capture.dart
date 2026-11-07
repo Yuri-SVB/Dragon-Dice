@@ -30,6 +30,10 @@ abstract class SensorFeed {
   /// [kMinReadingIntervalUs].
   int? get timeChannel => null;
 
+  /// The move a reading needs to be counted: some value changed by at least
+  /// this much since the last counted reading ([sensorCredit]).
+  int get minStep => 0;
+
   /// What to do while it captures.
   String get hint;
 
@@ -68,6 +72,10 @@ Map<String, SensorFeed Function()> platformFeeds() {
 
 // --- mouse ---------------------------------------------------------------------
 
+/// The pointer's move a reading needs to be counted, in physical pixels: a
+/// real move, not a wiggle.
+const int kMouseMinStepPx = 8;
+
 /// The mouse, or a finger, over a pad: each move is a reading of its position
 /// in physical pixels and its time in microseconds.
 class PointerFeed extends SensorFeed {
@@ -79,6 +87,9 @@ class PointerFeed extends SensorFeed {
 
   @override
   int get timeChannel => 2;
+
+  @override
+  int get minStep => kMouseMinStepPx;
 
   @override
   String get hint => 'Move the mouse, or a finger, over the pad, erratically, '
@@ -121,6 +132,10 @@ class PointerFeed extends SensorFeed {
 /// Fixed point for the accelerometer's m/s²: 16 fractional bits.
 const double _kAccelerometerScale = 65536;
 
+/// The change of acceleration a reading needs to be counted, in m/s²: a
+/// shake or a tap, not the sensor's noise at rest.
+const double _kAccelerometerMinStep = 0.5;
+
 /// The accelerometer, as fast as it reports: x, y, z in fixed point and the
 /// time in microseconds.
 class AccelerometerFeed extends SensorFeed {
@@ -134,8 +149,11 @@ class AccelerometerFeed extends SensorFeed {
   int get timeChannel => 3;
 
   @override
-  String get hint => 'Shake or tap the device, or rest it on something that '
-      'hums, until the credit is what you want.';
+  int get minStep => (_kAccelerometerMinStep * _kAccelerometerScale).round();
+
+  @override
+  String get hint => 'Shake or tap the device, irregularly, until the credit '
+      'is what you want.';
 
   @override
   Future<void> start(
@@ -193,14 +211,25 @@ List<int> brightnessGrid(
   ];
 }
 
-/// The camera, frame after frame: each frame's [brightnessGrid] is a reading.
-/// Its noise is what is credited, pixel by pixel.
+/// The change of a grid pixel's brightness (red + green + blue) a frame
+/// needs to be counted: a new frame, not the same one again.
+const int _kCameraMinStep = 8;
+
+/// The camera, frame after frame: each frame's [brightnessGrid], then its
+/// time in microseconds, is a reading. Its noise is what is credited.
 class CameraFeed extends SensorFeed {
   MediaStream? _stream;
   bool _running = false;
 
+  /// The grid's pixels, then the time.
   @override
-  int get channels => kCameraColumns * kCameraRows;
+  int get channels => kCameraColumns * kCameraRows + 1;
+
+  @override
+  int get timeChannel => kCameraColumns * kCameraRows;
+
+  @override
+  int get minStep => _kCameraMinStep;
 
   @override
   String get hint => 'Point the camera at anything not black and not blown '
@@ -230,7 +259,9 @@ class CameraFeed extends SensorFeed {
     while (_running) {
       try {
         final List<int> grid = await _grid(await track.captureFrame());
-        if (_running) onReading(grid);
+        if (_running) {
+          onReading(<int>[...grid, DateTime.now().microsecondsSinceEpoch]);
+        }
       } catch (e) {
         if (_running) onError(e);
         return;
@@ -306,6 +337,7 @@ class _CaptureDialogState extends State<_CaptureDialog> {
   late final SensorCapture _capture = SensorCapture(
     widget.feed.channels,
     timeChannel: widget.feed.timeChannel,
+    minStep: widget.feed.minStep,
   );
   SensorCredit _credit = sensorCredit(const <List<int>>[]);
   Timer? _refresh;
